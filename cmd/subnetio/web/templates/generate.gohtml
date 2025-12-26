@@ -1,0 +1,128 @@
+{{define "content"}}
+<div class="page-head">
+  <div>
+    <h1 class="page-title">Generate</h1>
+    <p class="page-subtitle">Preview and download device configs or DHCP scopes.</p>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Template options</h5>
+        <form class="row g-2" method="get" action="/generate">
+          <input type="hidden" name="project_id" value="{{.ActiveProjectID}}">
+          <div class="col-12">
+            <label class="form-label">Template</label>
+            <select class="form-select" name="template" required>
+              <option value="">Select…</option>
+              <option value="vyos" {{if eq .Gen.Template "vyos"}}selected{{end}}>VyOS (v1)</option>
+              <option value="cisco" {{if eq .Gen.Template "cisco"}}selected{{end}}>Cisco IOS/NX-OS (v1)</option>
+              <option value="juniper" {{if eq .Gen.Template "juniper"}}selected{{end}}>Juniper JunOS (v1)</option>
+              <option value="mikrotik" {{if eq .Gen.Template "mikrotik"}}selected{{end}}>Mikrotik RouterOS (v1)</option>
+            </select>
+            {{if .TemplateInfo.Name}}
+              <div class="form-text">Template version {{.TemplateInfo.Version}}{{if .TemplateInfo.Source}} · {{.TemplateInfo.Source}}{{end}}</div>
+            {{end}}
+          </div>
+          <div class="col-12">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="gen_vrf" name="include_vrf" {{if .Gen.IncludeVRF}}checked{{end}}>
+              <label class="form-check-label" for="gen_vrf">Include VRF definitions</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="gen_vlan" name="include_vlan" {{if .Gen.IncludeVLAN}}checked{{end}}>
+              <label class="form-check-label" for="gen_vlan">Include VLAN/SVI</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="gen_dhcp" name="include_dhcp" {{if .Gen.IncludeDHCP}}checked{{end}}>
+              <label class="form-check-label" for="gen_dhcp">Include DHCP scopes</label>
+            </div>
+            <div class="form-text">DHCP defaults come from Project/Site settings.</div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="gen_diff" name="show_diff" {{if .Gen.ShowDiff}}checked{{end}}>
+              <label class="form-check-label" for="gen_diff">Show diff vs full scope</label>
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Site filter</label>
+            <select class="form-select" name="filter_site">
+              <option value="">All sites</option>
+              {{range .Sites}}
+                <option value="{{.Name}}" {{if eq $.Gen.SiteFilter .Name}}selected{{end}}>{{.Name}}</option>
+              {{end}}
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label">VRF filter</label>
+            <input class="form-control" name="filter_vrf" value="{{.Gen.VRFFilter}}" placeholder="PROD">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Segment filter</label>
+            <input class="form-control" name="filter_segment" value="{{.Gen.SegmentFilter}}" placeholder="Segment name or ID">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Domain override</label>
+            <input class="form-control" name="domain_name" value="{{.Gen.DomainOverride}}" placeholder="corp.example">
+            <div class="form-text">Leave empty to use project default{{if .Meta.DomainName.Valid}} ({{.Meta.DomainName.String}}){{end}}.</div>
+          </div>
+          <div class="col-12 d-grid">
+            <button class="btn btn-primary" type="submit">Preview</button>
+          </div>
+          <div class="col-12 d-grid">
+            <a class="btn btn-outline-secondary {{if eq .Preview ""}}disabled{{end}}" href="/generate/download?{{.QueryString}}">Download</a>
+          </div>
+          <div class="col-12 d-grid">
+            <a class="btn btn-outline-primary {{if eq .Preview ""}}disabled{{end}}" href="/generate/bundle?{{.QueryString}}">Download bundle</a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card shadow-sm mt-3">
+      <div class="card-body">
+        <h5 class="card-title">Deployed baseline</h5>
+        <form method="post" action="/generate/deployed/save" class="row g-2">
+          <input type="hidden" name="project_id" value="{{.ActiveProjectID}}">
+          <input type="hidden" name="template" value="{{.Gen.Template}}">
+          <input type="hidden" name="scope_key" value="{{.ScopeKey}}">
+          <input type="hidden" name="query_string" value="{{.QueryString}}">
+          <div class="col-12">
+            <textarea class="form-control" name="content" rows="8" placeholder="Paste deployed config snapshot">{{.Deployed.Content}}</textarea>
+          </div>
+          <div class="col-12 text-muted small">
+            Scope key: {{.ScopeKey}}{{if .Deployed.UpdatedAt}} · updated {{.Deployed.UpdatedAt}}{{end}}
+          </div>
+          <div class="col-12 d-grid gap-2 d-md-flex">
+            <button class="btn btn-outline-primary" {{if eq .Gen.Template ""}}disabled{{end}}>Save baseline</button>
+            <button class="btn btn-outline-secondary" formaction="/generate/deployed/delete" {{if eq .Gen.Template ""}}disabled{{end}}>Remove baseline</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Preview</h5>
+        {{if .Preview}}
+          <pre class="bg-light p-3 mt-2 small">{{.Preview}}</pre>
+          {{if .Diff}}
+            <div class="fw-semibold mt-3">Diff (vs full scope)</div>
+            <pre class="bg-light p-3 mt-2 small">{{.Diff}}</pre>
+          {{end}}
+          {{if .DeployedDiff}}
+            <div class="fw-semibold mt-3">Diff (vs deployed)</div>
+            <pre class="bg-light p-3 mt-2 small">{{.DeployedDiff}}</pre>
+          {{end}}
+        {{else}}
+          <div class="text-muted">No template generated yet. Choose a template and preview.</div>
+          <pre class="bg-light p-3 mt-2 small">{{.Example}}</pre>
+        {{end}}
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}

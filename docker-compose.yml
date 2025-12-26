@@ -1,0 +1,17 @@
+services:
+  subnetio:
+    build: .
+    container_name: subnetio
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_PATH=/data/subnetio.sqlite
+      - LISTEN_ADDR=0.0.0.0:8080
+    volumes:
+      - ./data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 6

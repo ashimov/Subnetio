@@ -1,0 +1,64 @@
+{{define "layout"}}
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Subnetio</title>
+  <link href="/assets/bootstrap.min.css" rel="stylesheet">
+  <link href="/assets/style.css" rel="stylesheet">
+  <script src="/assets/htmx.min.js"></script>
+  <script src="/assets/bootstrap.bundle.min.js" defer></script>
+  <script src="/assets/app.js" defer></script>
+</head>
+<body>
+<div class="app-shell">
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <div class="brand">
+        <a class="brand-logo" href="/">Subnetio</a>
+        <span class="brand-tag">IP plans, VLSM, and configs</span>
+      </div>
+      <nav class="nav-strip">
+        <a class="nav-link {{if eq .Active "projects"}}active{{end}}" href="/projects">Projects</a>
+        <a class="nav-link {{if eq .Active "sites"}}active{{end}}" href="/sites?project_id={{.ActiveProjectID}}">Sites</a>
+        <a class="nav-link {{if eq .Active "segments"}}active{{end}}" href="/segments?project_id={{.ActiveProjectID}}">Segments</a>
+        <a class="nav-link {{if eq .Active "conflicts"}}active{{end}}" href="/conflicts?project_id={{.ActiveProjectID}}">Conflicts</a>
+        <a class="nav-link {{if eq .Active "planning"}}active{{end}}" href="/planning?project_id={{.ActiveProjectID}}">Planning</a>
+        <a class="nav-link {{if eq .Active "rules"}}active{{end}}" href="/rules?project_id={{.ActiveProjectID}}">Rules</a>
+        <a class="nav-link {{if eq .Active "generate"}}active{{end}}" href="/generate?project_id={{.ActiveProjectID}}">Generate</a>
+        <a class="nav-link {{if eq .Active "templates"}}active{{end}}" href="/templates?project_id={{.ActiveProjectID}}">Templates</a>
+        <a class="nav-link {{if eq .Active "export"}}active{{end}}" href="/export?project_id={{.ActiveProjectID}}">Export</a>
+      </nav>
+      <form class="project-switch" method="get" action="{{.CurrentPath}}">
+        <label>Project</label>
+        <select class="form-select form-select-sm" name="project_id" onchange="this.form.submit()">
+          {{range .Projects}}
+            <option value="{{.ID}}" {{if eq .ID $.ActiveProjectID}}selected{{end}}>{{.Name}}</option>
+          {{end}}
+        </select>
+      </form>
+    </div>
+  </header>
+
+  <main class="container page">
+    {{template "content" .}}
+  </main>
+</div>
+
+<div id="confirm-modal" class="modal-shell" aria-hidden="true">
+  <div class="modal-backdrop" data-modal-close></div>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+    <div class="modal-body">
+      <div class="modal-title" id="confirm-title">Подтвердите действие</div>
+      <p class="modal-text" data-confirm-message>Подтвердите действие.</p>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-outline-secondary" data-modal-close>Отмена</button>
+      <button type="button" class="btn btn-primary" data-modal-confirm>Подтвердить</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
+{{end}}

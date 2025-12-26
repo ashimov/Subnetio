@@ -1,0 +1,62 @@
+{{.Header}}{{range $gi, $g := .Groups}}{{if $gi}}
+
+{{end}}# Site {{groupLabel $g.Site $g.VRF}}
+{{- if and $.Options.IncludeVRF (ne (trim $g.VRF) "")}}
+set routing-instances {{$g.VRF}} instance-type vrf
+{{- end}}
+{{- if $.Options.IncludeVLAN}}
+{{- range $g.VLANs}}
+set vlans vlan{{.VLAN}} vlan-id {{.VLAN}}
+set interfaces irb unit {{.VLAN}} family inet address {{.Gateway}}/{{.PrefixBits}}
+{{- if and $.Options.IncludeVRF (ne (trim $g.VRF) "")}}
+set routing-instances {{$g.VRF}} interface irb.{{.VLAN}}
+{{- end}}
+{{- end}}
+{{- end}}
+{{- if $.Options.IncludeDHCP}}
+{{- range $g.Segments}}
+{{- if .DhcpEnabled}}
+{{- $poolName := safeName (printf "%s-%s-%d" .Site .VRF .VLAN) -}}
+{{- $subnet := printf "%s/%d" .Network .PrefixBits -}}
+{{- $dhcp := .DHCP -}}
+set system services dhcp-local-server group subnetio interface irb.{{.VLAN}}
+set access address-assignment pool {{$poolName}} family inet network {{$subnet}}
+{{- if and .DhcpStart .DhcpEnd}}
+set access address-assignment pool {{$poolName}} family inet range subnetio low {{.DhcpStart}}
+set access address-assignment pool {{$poolName}} family inet range subnetio high {{.DhcpEnd}}
+{{- end}}
+set access address-assignment pool {{$poolName}} family inet dhcp-attributes router {{.Gateway}}
+{{- if .DNS}}
+set access address-assignment pool {{$poolName}} family inet dhcp-attributes name-server {{join .DNS " "}}
+{{- end}}
+{{- if .Domain}}
+set access address-assignment pool {{$poolName}} family inet dhcp-attributes domain-name {{.Domain}}
+{{- end}}
+{{- range .NTP}}
+set access address-assignment pool {{$poolName}} family inet dhcp-attributes option 42 ip-address {{.}}
+{{- end}}
+{{- if $dhcp.Search}}
+set access address-assignment pool {{$poolName}} family inet dhcp-attributes domain-search {{quoteList $dhcp.Search " "}}
+{{- end}}
+{{- if gt $dhcp.LeaseTime 0}}
+set access address-assignment pool {{$poolName}} family inet dhcp-attributes lease-time {{$dhcp.LeaseTime}}
+{{- end}}
+{{- if gt $dhcp.RenewTime 0}}
+set access address-assignment pool {{$poolName}} family inet dhcp-attributes renewal-time {{$dhcp.RenewTime}}
+{{- end}}
+{{- if gt $dhcp.RebindTime 0}}
+set access address-assignment pool {{$poolName}} family inet dhcp-attributes rebinding-time {{$dhcp.RebindTime}}
+{{- end}}
+{{- if $dhcp.NextServer}}
+set access address-assignment pool {{$poolName}} family inet dhcp-attributes boot-server {{$dhcp.NextServer}}
+{{- end}}
+{{- if $dhcp.BootFile}}
+set access address-assignment pool {{$poolName}} family inet dhcp-attributes bootfile {{$dhcp.BootFile}}
+{{- end}}
+{{- range $dhcp.VendorOptions}}
+{{.}}
+{{- end}}
+{{- end}}
+{{- end}}
+{{- end}}
+{{end}}

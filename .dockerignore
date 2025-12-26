@@ -1,0 +1,7 @@
+data
+*.sqlite
+*.db
+.DS_Store
+.git
+.gitignore
+**/*.log

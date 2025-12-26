@@ -1,0 +1,90 @@
+{{define "content"}}
+<div class="page-head">
+  <div>
+    <h1 class="page-title">Planning</h1>
+    <p class="page-subtitle">Capacity overview, growth forecasts, and pool utilization.</p>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Forecast settings</h5>
+        <form method="get" action="/planning" class="row g-2">
+          <input type="hidden" name="project_id" value="{{.ActiveProjectID}}">
+          <div class="col-12">
+            <label class="form-label">Growth rate (% per month)</label>
+            <input class="form-control" name="growth_rate" type="number" step="0.1" min="0" value="{{printf "%.1f" .Capacity.GrowthRate}}">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Forecast horizon (months)</label>
+            <input class="form-control" name="months" type="number" min="0" value="{{.Capacity.Months}}">
+          </div>
+          <div class="col-12">
+            <label class="form-label">IPv6 unit prefix</label>
+            <input class="form-control" name="v6_unit" type="number" min="1" max="128" value="{{.Capacity.V6Unit}}">
+          </div>
+          <div class="col-12 d-grid">
+            <button class="btn btn-primary">Recalculate</button>
+          </div>
+        </form>
+        <div class="text-muted small mt-2">Defaults come from Project settings.</div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm mt-3">
+      <div class="card-body">
+        <h5 class="card-title">Summary IPv4</h5>
+        <div class="text-muted small">Total {{.Capacity.SummaryV4.Total}} · Used {{.Capacity.SummaryV4.Used}} · Free {{.Capacity.SummaryV4.Free}}</div>
+        <div class="fw-semibold mt-2">Utilization {{.Capacity.SummaryV4.Utilization}}</div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm mt-3">
+      <div class="card-body">
+        <h5 class="card-title">Summary IPv6</h5>
+        <div class="text-muted small">Total {{.Capacity.SummaryV6.Total}} · Used {{.Capacity.SummaryV6.Used}} · Free {{.Capacity.SummaryV6.Free}}</div>
+        <div class="fw-semibold mt-2">Utilization {{.Capacity.SummaryV6.Utilization}}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Pool capacity</h5>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>Site</th><th>Family</th><th>Tier</th><th>Priority</th><th>Pool</th>
+                <th>Total</th><th>Used</th><th>Free</th><th>Util</th><th>Forecast</th><th>Units</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{range .Capacity.Pools}}
+                <tr>
+                  <td>{{.Site}}</td>
+                  <td>{{.Family}}</td>
+                  <td>{{if .Tier}}{{.Tier}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+                  <td>{{if gt .Priority 0}}{{.Priority}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+                  <td><code>{{.CIDR}}</code></td>
+                  <td>{{.Total}}</td>
+                  <td>{{.Used}}</td>
+                  <td>{{.Free}}</td>
+                  <td>{{.Utilization}}</td>
+                  <td>{{.Forecast}}</td>
+                  <td>{{if .Units}}{{.Units}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+                </tr>
+              {{else}}
+                <tr><td colspan="11" class="text-muted">No pools yet</td></tr>
+              {{end}}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}

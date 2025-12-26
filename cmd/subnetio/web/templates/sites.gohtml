@@ -1,0 +1,203 @@
+{{define "content"}}
+<div class="page-head">
+  <div>
+    <h1 class="page-title">Sites</h1>
+    <p class="page-subtitle">Add sites, define pools, and override project defaults.</p>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Add site</h5>
+        <form method="post" action="/sites" class="row g-2">
+          <div class="col-6">
+            <select class="form-select" name="project_id" required>
+              <option value="">Project…</option>
+              {{range .Projects}}
+                <option value="{{.ID}}" {{if eq .ID $.ActiveProjectID}}selected{{end}}>{{.Name}}</option>
+              {{end}}
+            </select>
+          </div>
+          <div class="col-6">
+            <input class="form-control" name="name" placeholder="SAI / OST / YER" required>
+          </div>
+          <div class="col-6">
+            <input class="form-control" name="region" placeholder="Region (e.g. EU-West)">
+          </div>
+          <div class="col-6">
+            <input class="form-control" name="gateway_policy" placeholder="Gateway policy (auto .1 / custom)">
+          </div>
+          <div class="col-6">
+            <input class="form-control" name="dns" placeholder="DNS (comma-separated)">
+          </div>
+          <div class="col-6">
+            <input class="form-control" name="ntp" placeholder="NTP (comma-separated)">
+          </div>
+          <div class="col-12">
+            <div class="form-text">Leave DNS/NTP/Gateway policy empty to inherit project defaults.</div>
+          </div>
+          <div class="col-12">
+            <input class="form-control" name="reserved_ranges" placeholder="Reserved ranges (e.g. 10.30.99.0/28, 10.30.99.240/28)">
+          </div>
+          <div class="col-12 mt-2">
+            <h6 class="text-uppercase text-muted small mb-1">DHCP defaults (override project)</h6>
+          </div>
+          <div class="col-12">
+            <input class="form-control" name="dhcp_search" placeholder="DHCP search list (comma-separated)">
+          </div>
+          <div class="col-4">
+            <input class="form-control" name="dhcp_lease_time" type="number" min="0" placeholder="Lease time (sec)">
+          </div>
+          <div class="col-4">
+            <input class="form-control" name="dhcp_renew_time" type="number" min="0" placeholder="Renew time (sec)">
+          </div>
+          <div class="col-4">
+            <input class="form-control" name="dhcp_rebind_time" type="number" min="0" placeholder="Rebind time (sec)">
+          </div>
+          <div class="col-6">
+            <input class="form-control" name="dhcp_boot_file" placeholder="Boot file (optional)">
+          </div>
+          <div class="col-6">
+            <input class="form-control" name="dhcp_next_server" placeholder="Next server (optional)">
+          </div>
+          <div class="col-12">
+            <textarea class="form-control" name="dhcp_vendor_options" rows="3" placeholder="Vendor options (raw lines)"></textarea>
+          </div>
+          <div class="col-12 d-grid">
+            <button class="btn btn-primary">Add site</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card shadow-sm mt-3">
+      <div class="card-body">
+        <h5 class="card-title">Sites</h5>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>Project</th><th>Site</th><th>Region</th><th>DNS/NTP</th><th>DHCP defaults</th><th>Gateway policy</th><th>Reserved</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{range .Sites}}
+                <tr>
+                  <td>{{if .Project.Valid}}{{.Project.String}}{{else}}<span class="text-muted">Default</span>{{end}}</td>
+                  <td><strong>{{.Name}}</strong></td>
+                  <td>{{if .Region.Valid}}{{.Region.String}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+                  <td class="text-muted small">
+                    {{if .DNS.Valid}}DNS: {{.DNS.String}}{{else}}DNS: —{{end}}<br>
+                    {{if .NTP.Valid}}NTP: {{.NTP.String}}{{else}}NTP: —{{end}}
+                  </td>
+                  <td class="text-muted small">
+                    {{if .DhcpSearch.Valid}}search: {{.DhcpSearch.String}}{{else}}search: —{{end}}<br>
+                    {{if .DhcpLeaseTime.Valid}}lease: {{.DhcpLeaseTime.Int64}}s{{else}}lease: —{{end}}<br>
+                    {{if .DhcpBootFile.Valid}}boot: {{.DhcpBootFile.String}}{{else}}boot: —{{end}}
+                  </td>
+                  <td>{{if .GatewayPolicy.Valid}}{{.GatewayPolicy.String}}{{else}}<span class="text-muted">auto .1</span>{{end}}</td>
+                  <td>{{if .ReservedRanges.Valid}}{{.ReservedRanges.String}}{{else}}<span class="text-muted">—</span>{{end}}</td>
+                  <td>
+                    <form method="post" action="/sites/delete" data-confirm="Удалить сайт {{.Name}}? Это удалит все сегменты и пулы.">
+                      <input type="hidden" name="site_id" value="{{.ID}}">
+                      <input type="hidden" name="project_id" value="{{$.ActiveProjectID}}">
+                      <button type="submit" class="btn btn-sm btn-outline-secondary">Delete</button>
+                    </form>
+                  </td>
+                </tr>
+              {{else}}
+                <tr><td colspan="8" class="text-muted">No sites yet</td></tr>
+              {{end}}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Base pools</h5>
+        <form method="post" action="/pools" class="row g-2 mb-3">
+          <div class="col-4">
+            <select class="form-select" name="site_id" required>
+              <option value="">Site…</option>
+              {{range .Sites}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+            </select>
+          </div>
+          <div class="col-4">
+            <input class="form-control" name="cidr" placeholder="10.30.99.0/24" required>
+          </div>
+          <div class="col-2">
+            <select class="form-select" name="family">
+              <option value="ipv4">IPv4</option>
+              <option value="ipv6">IPv6</option>
+            </select>
+          </div>
+          <div class="col-2 d-grid">
+            <button class="btn btn-primary">Add</button>
+          </div>
+          <div class="col-6">
+            <input class="form-control" name="tier" placeholder="Tier (optional)">
+          </div>
+          <div class="col-6">
+            <input class="form-control" name="priority" type="number" placeholder="Priority (lower = first)">
+          </div>
+        </form>
+        {{if .PoolError}}
+          <div class="text-danger small mb-2">{{.PoolError}}</div>
+        {{end}}
+
+        <ul class="list-group">
+          {{range .Pools}}
+            <li class="list-group-item">
+              <details class="pool-editor">
+                <summary class="d-flex justify-content-between align-items-center">
+                  <span>{{.Site}} {{if .Family}}<span class="text-muted small">({{.Family}}{{if .Tier.Valid}}/{{.Tier.String}}{{end}})</span>{{end}}</span>
+                  <span><code>{{.CIDR}}</code>{{if gt .Priority 0}} <span class="text-muted small">p{{.Priority}}</span>{{end}}</span>
+                </summary>
+                <form method="post" action="/pools/update" class="row g-2 mt-2">
+                  <input type="hidden" name="pool_id" value="{{.ID}}">
+                  <input type="hidden" name="project_id" value="{{$.ActiveProjectID}}">
+                  <div class="col-6">
+                    <label class="form-label small">CIDR</label>
+                    <input class="form-control form-control-sm" name="cidr" value="{{.CIDR}}" required>
+                  </div>
+                  <div class="col-3">
+                    <label class="form-label small">Family</label>
+                    <select class="form-select form-select-sm" name="family">
+                      <option value="ipv4" {{if ne .Family "ipv6"}}selected{{end}}>IPv4</option>
+                      <option value="ipv6" {{if eq .Family "ipv6"}}selected{{end}}>IPv6</option>
+                    </select>
+                  </div>
+                  <div class="col-3">
+                    <label class="form-label small">Priority</label>
+                    <input class="form-control form-control-sm" name="priority" type="number" value="{{.Priority}}">
+                  </div>
+                  <div class="col-6">
+                    <label class="form-label small">Tier</label>
+                    <input class="form-control form-control-sm" name="tier" value="{{if .Tier.Valid}}{{.Tier.String}}{{end}}">
+                  </div>
+                  <div class="col-6 d-grid align-items-end">
+                    <button class="btn btn-sm btn-outline-primary mt-4" type="submit">Save changes</button>
+                  </div>
+                </form>
+                <form method="post" action="/pools/delete" data-confirm="Удалить пул {{.CIDR}}?">
+                  <input type="hidden" name="pool_id" value="{{.ID}}">
+                  <input type="hidden" name="project_id" value="{{$.ActiveProjectID}}">
+                  <button type="submit" class="btn btn-sm btn-outline-secondary mt-2">Delete pool</button>
+                </form>
+              </details>
+            </li>
+          {{else}}
+            <li class="list-group-item text-muted">No pools yet</li>
+          {{end}}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}

@@ -1,0 +1,60 @@
+{{.Header}}{{range $gi, $g := .Groups}}{{if $gi}}
+
+{{end}}# Site {{groupLabel $g.Site $g.VRF}}
+{{- if and $.Options.IncludeVRF (ne (trim $g.VRF) "")}}
+set vrf name {{$g.VRF}}
+{{- end}}
+{{- if $.Options.IncludeVLAN}}
+{{- range $g.VLANs}}
+set interfaces vlan vlan{{.VLAN}} description "{{.Name}}"
+set interfaces vlan vlan{{.VLAN}} address {{.Gateway}}/{{.PrefixBits}}
+{{- if and $.Options.IncludeVRF (ne (trim $g.VRF) "")}}
+set interfaces vlan vlan{{.VLAN}} vrf {{$g.VRF}}
+{{- end}}
+{{- end}}
+{{- end}}
+{{- if $.Options.IncludeDHCP}}
+{{- range $g.Segments}}
+{{- if .DhcpEnabled}}
+{{- $poolName := safeName (printf "%s-%s-%d" .Site .VRF .VLAN) -}}
+{{- $subnet := printf "%s/%d" .Network .PrefixBits -}}
+{{- $dhcp := .DHCP -}}
+set service dhcp-server shared-network-name {{$poolName}} subnet {{$subnet}} default-router {{.Gateway}}
+{{- if and .DhcpStart .DhcpEnd}}
+set service dhcp-server shared-network-name {{$poolName}} subnet {{$subnet}} range 0 start {{.DhcpStart}}
+set service dhcp-server shared-network-name {{$poolName}} subnet {{$subnet}} range 0 stop {{.DhcpEnd}}
+{{- end}}
+{{- range .DNS}}
+set service dhcp-server shared-network-name {{$poolName}} subnet {{$subnet}} dns-server {{.}}
+{{- end}}
+{{- range .NTP}}
+set service dhcp-server shared-network-name {{$poolName}} subnet {{$subnet}} ntp-server {{.}}
+{{- end}}
+{{- if .Domain}}
+set service dhcp-server shared-network-name {{$poolName}} subnet {{$subnet}} domain-name {{.Domain}}
+{{- end}}
+{{- if $dhcp.Search}}
+set service dhcp-server shared-network-name {{$poolName}} subnet {{$subnet}} domain-search {{quoteList $dhcp.Search " "}}
+{{- end}}
+{{- if gt $dhcp.LeaseTime 0}}
+set service dhcp-server shared-network-name {{$poolName}} subnet {{$subnet}} lease {{$dhcp.LeaseTime}}
+{{- end}}
+{{- if gt $dhcp.RenewTime 0}}
+set service dhcp-server shared-network-name {{$poolName}} subnet {{$subnet}} option 58 {{$dhcp.RenewTime}}
+{{- end}}
+{{- if gt $dhcp.RebindTime 0}}
+set service dhcp-server shared-network-name {{$poolName}} subnet {{$subnet}} option 59 {{$dhcp.RebindTime}}
+{{- end}}
+{{- if $dhcp.BootFile}}
+set service dhcp-server shared-network-name {{$poolName}} subnet {{$subnet}} bootfile-name {{$dhcp.BootFile}}
+{{- end}}
+{{- if $dhcp.NextServer}}
+set service dhcp-server shared-network-name {{$poolName}} subnet {{$subnet}} tftp-server-name {{$dhcp.NextServer}}
+{{- end}}
+{{- range $dhcp.VendorOptions}}
+{{.}}
+{{- end}}
+{{- end}}
+{{- end}}
+{{- end}}
+{{end}}

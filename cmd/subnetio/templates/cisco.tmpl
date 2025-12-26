@@ -1,0 +1,70 @@
+{{.Header}}{{range $gi, $g := .Groups}}{{if $gi}}
+
+{{end}}! Site {{groupLabel $g.Site $g.VRF}}
+{{- if and $.Options.IncludeVRF (ne (trim $g.VRF) "")}}
+{{- $rdBase := firstVLAN $g.VLANs}}
+vrf definition {{$g.VRF}}
+ rd 1:{{$rdBase}}
+ exit
+{{- end}}
+{{- if $.Options.IncludeVLAN}}
+{{- range $g.VLANs}}
+vlan {{.VLAN}}
+ name {{.Name}}
+ exit
+interface Vlan{{.VLAN}}
+ description {{.Name}}
+{{- if and $.Options.IncludeVRF (ne (trim $g.VRF) "")}}
+ vrf forwarding {{$g.VRF}}
+{{- end}}
+ ip address {{.Gateway}} {{.Mask}}
+ no shutdown
+ exit
+{{- end}}
+{{- end}}
+{{- if $.Options.IncludeDHCP}}
+{{- range $g.Segments}}
+{{- if .DhcpEnabled}}
+{{- $poolName := safeName (printf "%s-%s" .Site .Name) -}}
+{{- $dhcp := .DHCP -}}
+ip dhcp pool {{$poolName}}
+ network {{.Network}} {{.Mask}}
+ default-router {{.Gateway}}
+{{- if .DNS}}
+ dns-server {{join .DNS " "}}
+{{- end}}
+{{- if .Domain}}
+ domain-name {{.Domain}}
+{{- end}}
+{{- if .NTP}}
+ option 42 ip {{join .NTP " "}}
+{{- end}}
+{{- if $dhcp.Search}}
+ option 119 ascii {{ciscoDomainSearch $dhcp.Search}}
+{{- end}}
+{{- if gt $dhcp.LeaseTime 0}}
+ lease {{ciscoLease $dhcp.LeaseTime}}
+{{- end}}
+{{- if gt $dhcp.RenewTime 0}}
+ option 58 {{$dhcp.RenewTime}}
+{{- end}}
+{{- if gt $dhcp.RebindTime 0}}
+ option 59 {{$dhcp.RebindTime}}
+{{- end}}
+{{- if $dhcp.NextServer}}
+ next-server {{$dhcp.NextServer}}
+{{- end}}
+{{- if $dhcp.BootFile}}
+ bootfile {{$dhcp.BootFile}}
+{{- end}}
+{{- range $dhcp.VendorOptions}}
+ {{.}}
+{{- end}}
+{{- if and .DhcpStart .DhcpEnd}}
+! range {{.DhcpStart}} {{.DhcpEnd}}
+{{- end}}
+ exit
+{{- end}}
+{{- end}}
+{{- end}}
+{{end}}

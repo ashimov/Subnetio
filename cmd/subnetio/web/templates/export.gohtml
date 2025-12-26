@@ -1,0 +1,67 @@
+{{define "content"}}
+<div class="page-head">
+  <div>
+    <h1 class="page-title">Export</h1>
+    <p class="page-subtitle">CSV/XLSX for humans, YAML/JSON for git-friendly workflows.</p>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Plan export (CSV)</h5>
+        <div class="d-grid gap-2">
+          <a class="btn btn-primary" href="/export/csv?project_id={{.ActiveProjectID}}">Export Plan CSV</a>
+          <a class="btn btn-outline-primary" href="/export/xlsx?project_id={{.ActiveProjectID}}">Export XLSX (Sites / Segments / DHCP / Conflicts)</a>
+        </div>
+        <div class="text-muted small mt-2">CSV uses strict schema with row_type; XLSX keeps human-friendly sheets.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Plan export (YAML/JSON)</h5>
+        <div class="d-grid gap-2">
+          <a class="btn btn-success" href="/export/yaml?project_id={{.ActiveProjectID}}">Export Plan YAML</a>
+          <a class="btn btn-outline-success" href="/export/json?project_id={{.ActiveProjectID}}">Export Plan JSON</a>
+        </div>
+        <div class="text-muted small mt-2">Includes schema_version, meta/rules rows, sites, pools, segments.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mt-3">
+  <div class="col-12">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Defaults export</h5>
+        <div class="d-grid gap-2 d-md-flex">
+          <a class="btn btn-outline-primary" href="/export/defaults/csv?project_id={{.ActiveProjectID}}">Defaults CSV</a>
+          <a class="btn btn-outline-success" href="/export/defaults/yaml?project_id={{.ActiveProjectID}}">Defaults YAML</a>
+          <a class="btn btn-outline-success" href="/export/defaults/json?project_id={{.ActiveProjectID}}">Defaults JSON</a>
+        </div>
+        <div class="text-muted small mt-2">Includes project and site DHCP defaults, search list, lease timers, and PXE options.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mt-3">
+  <div class="col-12">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Audit trail export</h5>
+        <div class="d-grid gap-2 d-md-flex">
+          <a class="btn btn-outline-primary" href="/export/audit/csv?project_id={{.ActiveProjectID}}">Audit CSV</a>
+          <a class="btn btn-outline-success" href="/export/audit/json?project_id={{.ActiveProjectID}}">Audit JSON</a>
+        </div>
+        <div class="text-muted small mt-2">Includes actor, action, entity, and before/after snapshots.</div>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}

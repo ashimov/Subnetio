@@ -1,0 +1,434 @@
+{{define "content"}}
+<div class="page-head">
+  <div>
+    <h1 class="page-title">Segments</h1>
+    <p class="page-subtitle">Auto-allocate by VLSM, lock deployed subnets, and validate conflicts.</p>
+  </div>
+  <div class="page-actions">
+    <form method="post" action="/allocate">
+      <button class="btn btn-success">Auto-allocate (VLSM)</button>
+    </form>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Add segment</h5>
+        <form method="post" action="/segments" class="row g-2">
+          <div class="col-6">
+            <select class="form-select" name="site_id" required>
+              <option value="">Site…</option>
+              {{range .Sites}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+            </select>
+          </div>
+          <div class="col-6">
+            <input class="form-control" name="vrf" placeholder="PROD/DMZ/MGMT" required>
+          </div>
+          <div class="col-4">
+            <input class="form-control" name="vlan" placeholder="VLAN ID" required>
+          </div>
+          <div class="col-8">
+            <input class="form-control" name="name" placeholder="Segment name (users, mgmt, dmz)" required>
+          </div>
+          <div class="col-6">
+            <input class="form-control" name="hosts" placeholder="Hosts (e.g. 120)">
+          </div>
+          <div class="col-6">
+            <input class="form-control" name="prefix" placeholder="Prefix (e.g. 25)">
+          </div>
+          <div class="col-6">
+            <input class="form-control" name="prefix_v6" placeholder="IPv6 prefix (e.g. 64)">
+          </div>
+          <div class="col-6">
+            <input class="form-control" name="pool_tier" placeholder="Pool tier (e.g. core/edge)">
+          </div>
+          <div class="col-6 form-check ms-2">
+            <input class="form-check-input" type="checkbox" name="dhcp_enabled" id="dhcp_enabled">
+            <label class="form-check-label" for="dhcp_enabled">DHCP enabled</label>
+          </div>
+          <div class="col-6">
+            <input class="form-control" name="dhcp_range" placeholder="DHCP range (optional)">
+          </div>
+          <div class="col-12">
+            <input class="form-control" name="dhcp_reservations" placeholder="Reservations (optional)">
+          </div>
+          <div class="col-6">
+            <input class="form-control" name="gateway" placeholder="Gateway (auto .1 / custom)">
+          </div>
+          <div class="col-6">
+            <input class="form-control" name="tags" placeholder="Tags (prod/test/dev)">
+          </div>
+          <div class="col-6">
+            <input class="form-control" name="gateway_v6" placeholder="IPv6 gateway (optional)">
+          </div>
+          <div class="col-12">
+            <input class="form-control" name="notes" placeholder="Notes">
+          </div>
+          <div class="col-12 form-check ms-2">
+            <input class="form-check-input" type="checkbox" name="locked" id="locked">
+            <label class="form-check-label" for="locked">Lock subnet (не двигать при пересчёте)</label>
+          </div>
+          <div class="col-12 d-grid">
+            <button class="btn btn-primary">Add</button>
+          </div>
+          <div class="col-12 text-muted small">
+            Можно указать либо Hosts, либо Prefix. Если оба — Prefix приоритетнее. IPv6 использует prefix_v6.
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card shadow-sm mt-3">
+      <div class="card-body">
+        <h5 class="card-title">What-if allocator</h5>
+        <form method="post" action="/whatif" class="row g-2">
+          <div class="col-6">
+            <select class="form-select" name="whatif_site_id" required>
+              <option value="">Site…</option>
+              {{range .Sites}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+            </select>
+          </div>
+          <div class="col-6">
+            <input class="form-control" name="whatif_vrf" placeholder="VRF" required>
+          </div>
+          <div class="col-4">
+            <input class="form-control" name="whatif_vlan" placeholder="VLAN ID" required>
+          </div>
+          <div class="col-8">
+            <input class="form-control" name="whatif_name" placeholder="Segment name" required>
+          </div>
+          <div class="col-6">
+            <input class="form-control" name="whatif_hosts" placeholder="Hosts">
+          </div>
+          <div class="col-6">
+            <input class="form-control" name="whatif_prefix" placeholder="Prefix">
+          </div>
+          <div class="col-6">
+            <input class="form-control" name="whatif_prefix_v6" placeholder="IPv6 prefix (optional)">
+          </div>
+          <div class="col-12 d-grid">
+            <button class="btn btn-outline-primary">Simulate</button>
+          </div>
+          <div class="col-12 text-muted small">
+            Simulates allocation without writing changes and shows diffs.
+          </div>
+        </form>
+      </div>
+    </div>
+
+    {{if .WhatIf}}
+    <div class="card shadow-sm mt-3">
+      <div class="card-body">
+        <h6 class="card-title">What-if result</h6>
+        <div class="text-muted small">{{.WhatIf.Summary}}</div>
+        <div class="mt-2">
+          <span class="badge text-bg-info">Proposed CIDR</span>
+          {{if .WhatIf.ProposedCIDR}}<code>{{.WhatIf.ProposedCIDR}}</code>{{else}}<span class="text-muted">not allocated</span>{{end}}
+        </div>
+        {{if .WhatIf.ProposedCIDRV6}}
+        <div class="mt-2">
+          <span class="badge text-bg-info">Proposed CIDR v6</span>
+          <code>{{.WhatIf.ProposedCIDRV6}}</code>
+        </div>
+        {{end}}
+        {{if .WhatIf.Conflicts}}
+          <div class="mt-3">
+            <div class="fw-semibold">Simulation conflicts</div>
+            <ul class="small">
+              {{range .WhatIf.Conflicts}}<li><code>{{.Kind}}</code> {{.Detail}}</li>{{end}}
+            </ul>
+          </div>
+        {{end}}
+        {{if .WhatIf.Changes}}
+          <div class="mt-3">
+            <div class="fw-semibold">Moved segments</div>
+            <div class="table-responsive">
+              <table class="table table-sm align-middle">
+                <thead>
+                  <tr><th>Site</th><th>VRF</th><th>VLAN</th><th>Name</th><th>Old</th><th>New</th><th>Old v6</th><th>New v6</th></tr>
+                </thead>
+                <tbody>
+                  {{range .WhatIf.Changes}}
+                    <tr>
+                      <td>{{.Site}}</td>
+                      <td><code>{{.VRF}}</code></td>
+                      <td>{{.VLAN}}</td>
+                      <td>{{.Name}}</td>
+                      <td><code>{{.OldCIDR}}</code></td>
+                      <td><code>{{.NewCIDR}}</code></td>
+                      <td>{{if .OldCIDRV6}}<code>{{.OldCIDRV6}}</code>{{else}}<span class="text-muted">—</span>{{end}}</td>
+                      <td>{{if .NewCIDRV6}}<code>{{.NewCIDRV6}}</code>{{else}}<span class="text-muted">—</span>{{end}}</td>
+                    </tr>
+                  {{end}}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        {{end}}
+        {{if .WhatIf.Unallocated}}
+          <div class="mt-3">
+            <div class="fw-semibold">Unallocated after simulation</div>
+            <ul class="small">
+              {{range .WhatIf.Unallocated}}<li>{{.Site}} {{.VRF}} vlan={{.VLAN}} {{.Name}}</li>{{end}}
+            </ul>
+          </div>
+        {{end}}
+      </div>
+    </div>
+    {{end}}
+
+    <div class="card shadow-sm mt-3">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="card-title m-0">Conflicts (summary)</h6>
+          <a class="small" href="/conflicts?project_id={{.ActiveProjectID}}">Open validator</a>
+        </div>
+        <ul class="list-group">
+          {{range .Conflicts}}
+            <li class="list-group-item">
+              <span class="badge {{if eq .Level "Warning"}}text-bg-warning{{else}}text-bg-danger{{end}} me-2">{{.Kind}}</span>{{.Detail}}
+            </li>
+          {{else}}
+            <li class="list-group-item text-muted">No conflicts detected</li>
+          {{end}}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h5 class="card-title m-0">Фильтры плана</h5>
+          <div class="text-muted small">Показано {{.SegmentsShown}} из {{.SegmentsTotal}}</div>
+        </div>
+        <form method="get" action="/segments" class="row g-2 align-items-end">
+          <input type="hidden" name="project_id" value="{{.ActiveProjectID}}">
+          <div class="col-md-6">
+            <label class="form-label small">Сайт</label>
+            <select class="form-select form-select-sm" name="filter_site">
+              <option value="">Все сайты</option>
+              {{range .Sites}}
+                <option value="{{.ID}}" {{if eq $.SegmentFilters.SiteID .ID}}selected{{end}}>{{.Name}}</option>
+              {{end}}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small">VRF</label>
+            <input class="form-control form-control-sm" name="filter_vrf" value="{{.SegmentFilters.VRF}}" placeholder="PROD/DMZ">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small">VLAN</label>
+            <input class="form-control form-control-sm" name="filter_vlan" type="number" min="1" value="{{if gt .SegmentFilters.VLAN 0}}{{.SegmentFilters.VLAN}}{{end}}" placeholder="ID">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small">Тег</label>
+            <input class="form-control form-control-sm" name="filter_tag" value="{{.SegmentFilters.Tag}}" placeholder="prod/test">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small">Название</label>
+            <input class="form-control form-control-sm" name="filter_name" value="{{.SegmentFilters.Name}}" placeholder="users/mgmt">
+          </div>
+          <div class="col-12 d-flex gap-2">
+            <button class="btn btn-sm btn-primary">Применить</button>
+            <a class="btn btn-sm btn-outline-secondary" href="/segments?project_id={{.ActiveProjectID}}">Сбросить</a>
+          </div>
+        </form>
+
+        <hr class="my-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="fw-semibold">Сохраненные представления</div>
+        </div>
+        <form method="post" action="/filters/save" class="row g-2 mt-2">
+          <input type="hidden" name="project_id" value="{{.ActiveProjectID}}">
+          <input type="hidden" name="page" value="segments">
+          <input type="hidden" name="query" value="{{.SegmentFiltersQuery}}">
+          <div class="col-8">
+            <input class="form-control form-control-sm" name="name" placeholder="Название (например, PROD/VRF)">
+          </div>
+          <div class="col-4 d-grid">
+            <button class="btn btn-sm btn-outline-primary" {{if not .SegmentFiltersActive}}disabled{{end}}>Сохранить</button>
+          </div>
+          {{if .SegmentFilterOk}}
+            <div class="col-12 text-success small">{{.SegmentFilterOk}}</div>
+          {{end}}
+          {{if .SegmentFilterError}}
+            <div class="col-12 text-danger small">{{.SegmentFilterError}}</div>
+          {{end}}
+          {{if not .SegmentFiltersActive}}
+            <div class="col-12 text-muted small">Сначала задайте фильтры для сохранения.</div>
+          {{end}}
+        </form>
+
+        <div class="mt-2">
+          {{range .SegmentPresets}}
+            <div class="d-flex justify-content-between align-items-center border rounded px-2 py-2 mb-2">
+              <div class="fw-semibold">{{.Name}}</div>
+              <div class="d-flex gap-2">
+                <a class="btn btn-sm btn-outline-primary" href="/segments?project_id={{$.ActiveProjectID}}{{if .Query}}&{{.Query}}{{end}}">Применить</a>
+                <form method="post" action="/filters/delete" data-confirm="Удалить сохраненный фильтр {{.Name}}?">
+                  <input type="hidden" name="project_id" value="{{$.ActiveProjectID}}">
+                  <input type="hidden" name="page" value="segments">
+                  <input type="hidden" name="preset_id" value="{{.ID}}">
+                  <input type="hidden" name="return_to" value="{{$.SegmentFiltersQuery}}">
+                  <button type="submit" class="btn btn-sm btn-outline-secondary">Удалить</button>
+                </form>
+              </div>
+            </div>
+          {{else}}
+            <div class="text-muted small">Нет сохраненных представлений.</div>
+          {{end}}
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Plan</h5>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>Segment</th><th>Site</th><th>VRF</th><th>VLAN</th><th>Request</th><th>Request v6</th>
+                <th>Preview</th><th>DHCP</th><th>Gateway</th><th>Tags/Notes</th><th>Locked</th><th>Status</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{range .Segments}}
+                <tr>
+                  <td><strong>{{.Name}}</strong></td>
+                  <td>{{.Site}}</td>
+                  <td><code>{{.VRF}}</code></td>
+                  <td>{{.VLAN}}</td>
+                  <td class="text-muted">{{.Request}}</td>
+                  <td class="text-muted">{{.RequestV6}}</td>
+                  <td>
+                    {{if .CIDR}}
+                      <div><code>{{.CIDR}}</code></div>
+                      {{if .Mask}}<div class="text-muted small">mask {{.Mask}} · net {{.Network}} · bcast {{.Broadcast}}</div>{{end}}
+                      {{if .PoolLabel}}<div class="text-muted small">pool {{.PoolLabel}}</div>{{end}}
+                    {{else}}
+                      <span class="text-muted">not allocated</span>
+                    {{end}}
+                    {{if .CIDRV6}}
+                      <div class="mt-2"><code>{{.CIDRV6}}</code> <span class="text-muted small">v6</span></div>
+                      {{if .GatewayV6}}<div class="text-muted small">gw6 {{.GatewayV6}}</div>{{end}}
+                      {{if .PoolLabelV6}}<div class="text-muted small">pool6 {{.PoolLabelV6}}</div>{{end}}
+                    {{end}}
+                  </td>
+                  <td>
+                    {{if .DhcpEnabled}}On{{else}}Off{{end}}
+                    {{if .DhcpEnabled}}<div class="text-muted small">{{.DhcpRange}}</div>{{end}}
+                    {{if .Reservations}}<div class="text-muted small">resv: {{.Reservations}}</div>{{end}}
+                  </td>
+                  <td>{{if .Gateway}}{{.Gateway}}{{else if .CIDR}}<span class="text-muted">auto</span>{{else}}<span class="text-muted">—</span>{{end}}</td>
+                  <td class="text-muted small">
+                    {{if .Tags.Valid}}tags: {{.Tags.String}}{{else}}tags: —{{end}}
+                    {{if .PoolTier.Valid}}<div>tier: {{.PoolTier.String}}</div>{{end}}
+                    {{if .Notes.Valid}}<div>notes: {{.Notes.String}}</div>{{end}}
+                  </td>
+                  <td>{{if .Locked}}Yes{{else}}No{{end}}</td>
+                  <td>
+                    <span class="badge text-bg-{{.StatusClass}}">{{.StatusLabel}}</span>
+                    {{if .StatusDetail}}<div class="text-muted small">{{.StatusDetail}}</div>{{end}}
+                  </td>
+                  <td>
+                    <div class="d-grid gap-2">
+                      <details class="inline-editor">
+                        <summary class="btn btn-sm btn-outline-primary">Edit</summary>
+                        <form method="post" action="/segments/update" class="row g-2 mt-2">
+                          <input type="hidden" name="segment_id" value="{{.ID}}">
+                          <input type="hidden" name="project_id" value="{{$.ActiveProjectID}}">
+                          <input type="hidden" name="return_to" value="{{$.SegmentFiltersQuery}}">
+                          <div class="col-6">
+                            <label class="form-label small">VRF</label>
+                            <input class="form-control form-control-sm" name="vrf" value="{{.VRF}}" required>
+                          </div>
+                          <div class="col-6">
+                            <label class="form-label small">VLAN</label>
+                            <input class="form-control form-control-sm" name="vlan" type="number" min="1" value="{{.VLAN}}" required>
+                          </div>
+                          <div class="col-12">
+                            <label class="form-label small">Name</label>
+                            <input class="form-control form-control-sm" name="name" value="{{.Name}}" required>
+                          </div>
+                          <div class="col-4">
+                            <label class="form-label small">Hosts</label>
+                            <input class="form-control form-control-sm" name="hosts" value="{{if .Hosts.Valid}}{{.Hosts.Int64}}{{end}}">
+                          </div>
+                          <div class="col-4">
+                            <label class="form-label small">Prefix</label>
+                            <input class="form-control form-control-sm" name="prefix" value="{{if .Prefix.Valid}}{{.Prefix.Int64}}{{end}}">
+                          </div>
+                          <div class="col-4">
+                            <label class="form-label small">Prefix v6</label>
+                            <input class="form-control form-control-sm" name="prefix_v6" value="{{if .PrefixV6.Valid}}{{.PrefixV6.Int64}}{{end}}">
+                          </div>
+                          <div class="col-6">
+                            <label class="form-label small">Pool tier</label>
+                            <input class="form-control form-control-sm" name="pool_tier" value="{{if .PoolTier.Valid}}{{.PoolTier.String}}{{end}}">
+                          </div>
+                          <div class="col-6">
+                            <div class="form-check mt-4">
+                              <input class="form-check-input" type="checkbox" name="locked" id="locked_{{.ID}}" {{if .Locked}}checked{{end}}>
+                              <label class="form-check-label small" for="locked_{{.ID}}">Locked</label>
+                            </div>
+                          </div>
+                          <div class="col-6">
+                            <div class="form-check mt-2">
+                              <input class="form-check-input" type="checkbox" name="dhcp_enabled" id="dhcp_enabled_{{.ID}}" {{if .DhcpEnabled}}checked{{end}}>
+                              <label class="form-check-label small" for="dhcp_enabled_{{.ID}}">DHCP enabled</label>
+                            </div>
+                          </div>
+                          <div class="col-6">
+                            <label class="form-label small">DHCP range</label>
+                            <input class="form-control form-control-sm" name="dhcp_range" value="{{if .Segment.DhcpRange.Valid}}{{.Segment.DhcpRange.String}}{{end}}">
+                          </div>
+                          <div class="col-12">
+                            <label class="form-label small">DHCP reservations</label>
+                            <input class="form-control form-control-sm" name="dhcp_reservations" value="{{if .Segment.DhcpReservations.Valid}}{{.Segment.DhcpReservations.String}}{{end}}">
+                          </div>
+                          <div class="col-6">
+                            <label class="form-label small">Gateway</label>
+                            <input class="form-control form-control-sm" name="gateway" value="{{if .Segment.Gateway.Valid}}{{.Segment.Gateway.String}}{{end}}">
+                          </div>
+                          <div class="col-6">
+                            <label class="form-label small">Gateway v6</label>
+                            <input class="form-control form-control-sm" name="gateway_v6" value="{{if .Segment.GatewayV6.Valid}}{{.Segment.GatewayV6.String}}{{end}}">
+                          </div>
+                          <div class="col-6">
+                            <label class="form-label small">Tags</label>
+                            <input class="form-control form-control-sm" name="tags" value="{{if .Tags.Valid}}{{.Tags.String}}{{end}}">
+                          </div>
+                          <div class="col-6">
+                            <label class="form-label small">Notes</label>
+                            <input class="form-control form-control-sm" name="notes" value="{{if .Notes.Valid}}{{.Notes.String}}{{end}}">
+                          </div>
+                          <div class="col-12 d-grid">
+                            <button type="submit" class="btn btn-sm btn-outline-primary">Save changes</button>
+                          </div>
+                        </form>
+                      </details>
+                      <form method="post" action="/segments/delete" data-confirm="Удалить сегмент {{.Name}} ({{.Site}}/{{.VRF}} VLAN {{.VLAN}})?">
+                        <input type="hidden" name="segment_id" value="{{.ID}}">
+                        <input type="hidden" name="project_id" value="{{$.ActiveProjectID}}">
+                        <input type="hidden" name="return_to" value="{{$.SegmentFiltersQuery}}">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">Delete</button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              {{else}}
+                <tr><td colspan="13" class="text-muted">No segments yet</td></tr>
+              {{end}}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}

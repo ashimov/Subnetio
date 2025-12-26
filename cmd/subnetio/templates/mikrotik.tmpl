@@ -1,0 +1,20 @@
+{{.Header}}{{range $gi, $g := .Groups}}{{if $gi}}
+
+{{end}}# Site {{groupLabel $g.Site $g.VRF}}
+{{- if $.Options.IncludeVLAN}}
+{{- range $g.VLANs}}
+/interface vlan add name=vlan{{.VLAN}} vlan-id={{.VLAN}} interface=bridge1
+/ip address add address={{.Gateway}}/{{.PrefixBits}} interface=vlan{{.VLAN}}
+{{- end}}
+{{- end}}
+{{- if $.Options.IncludeDHCP}}
+{{- range $g.Segments}}
+{{- if .DhcpEnabled}}
+{{mikrotikDhcpLine . .DHCP}}
+{{- range .DHCP.VendorOptions}}
+{{.}}
+{{- end}}
+{{- end}}
+{{- end}}
+{{- end}}
+{{end}}

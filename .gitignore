@@ -1,0 +1,24 @@
+# OS
+.DS_Store
+.history
+# Go build artifacts
+/subnetio
+*.exe
+*.exe~
+*.out
+*.test
+*.prof
+*.cover
+*.cov
+
+# SQLite/runtime data
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+*.sqlite-wal
+*.sqlite-shm
+
+# App data
+/data/*.log

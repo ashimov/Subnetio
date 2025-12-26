@@ -1,0 +1,86 @@
+{{define "content"}}
+<div class="page-head">
+  <div>
+    <h1 class="page-title">Rules</h1>
+    <p class="page-subtitle">Configure validation rules per project.</p>
+  </div>
+  <div class="page-actions">
+    <form method="post" action="/rules/delete" data-confirm="Сбросить правила проекта {{.ActiveProjectName}} до значений по умолчанию?">
+      <input type="hidden" name="project_id" value="{{.ActiveProjectID}}">
+      <button type="submit" class="btn btn-outline-secondary">Reset rules</button>
+    </form>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Apply preset</h5>
+        <form method="post" action="/rules" class="row g-2">
+          <div class="col-12">
+            <select class="form-select" name="preset" required>
+              <option value="">Select preset…</option>
+              <option value="strict">Strict (no VLAN dup per site)</option>
+              <option value="balanced">Balanced (per VRF)</option>
+              <option value="legacy">Legacy (relaxed)</option>
+            </select>
+          </div>
+          <div class="col-12 d-grid">
+            <button class="btn btn-primary">Apply preset</button>
+          </div>
+          <div class="col-12 text-muted small">Presets override custom values below.</div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Custom rules</h5>
+        <form method="post" action="/rules" class="row g-2">
+          <input type="hidden" name="preset" value="custom">
+          <div class="col-12">
+            <label class="form-label">VLAN duplication scope</label>
+            <select class="form-select" name="vlan_scope" required>
+              <option value="site_vrf" {{if eq .Rules.VLANScope "site_vrf"}}selected{{end}}>Per site + VRF</option>
+              <option value="site" {{if eq .Rules.VLANScope "site"}}selected{{end}}>Per site (strict)</option>
+              <option value="global" {{if eq .Rules.VLANScope "global"}}selected{{end}}>Global (very strict)</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Pool strategy</label>
+            <select class="form-select" name="pool_strategy" required>
+              <option value="spillover" {{if eq .Rules.PoolStrategy "spillover"}}selected{{end}}>Spillover (fill first, then next)</option>
+              <option value="contiguous" {{if eq .Rules.PoolStrategy "contiguous"}}selected{{end}}>Contiguous per pool</option>
+              <option value="tiered" {{if eq .Rules.PoolStrategy "tiered"}}selected{{end}}>Tiered (use pool tiers)</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="require_in_pool" id="require_in_pool" {{if .Rules.RequireInPool}}checked{{end}}>
+              <label class="form-check-label" for="require_in_pool">Require subnets to be inside pool</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="allow_reserved_overlap" id="allow_reserved_overlap" {{if .Rules.AllowReservedOverlap}}checked{{end}}>
+              <label class="form-check-label" for="allow_reserved_overlap">Allow overlap with reserved ranges</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="pool_tier_fallback" id="pool_tier_fallback" {{if .Rules.PoolTierFallback}}checked{{end}}>
+              <label class="form-check-label" for="pool_tier_fallback">Tier fallback to any pool when not found</label>
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Oversize warning threshold (%)</label>
+            <input class="form-control" name="oversize_threshold" type="number" min="10" max="95" value="{{.Rules.OversizeThreshold}}">
+          </div>
+          <div class="col-12 d-grid">
+            <button class="btn btn-primary">Save custom rules</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}

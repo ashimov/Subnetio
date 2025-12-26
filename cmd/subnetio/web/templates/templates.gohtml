@@ -1,0 +1,172 @@
+{{define "content"}}
+<div class="page-head">
+  <div>
+    <h1 class="page-title">Templates</h1>
+    <p class="page-subtitle">Template context, helpers, and overrides.</p>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Available templates</h5>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr><th>Name</th><th>Version</th><th>Source</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+              {{range .TemplateCatalog}}
+                <tr>
+                  <td><strong>{{.Name}}</strong></td>
+                  <td>{{if .Version}}{{.Version}}{{else}}<span class="text-muted">-</span>{{end}}</td>
+                  <td>{{if .Source}}{{.Source}}{{else}}<span class="text-muted">-</span>{{end}}</td>
+                  <td>
+                    {{if eq .Source "override"}}
+                      <form method="post" action="/templates/delete" data-confirm="Delete override {{.Name}}?">
+                        <input type="hidden" name="template_name" value="{{.Name}}">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">Remove</button>
+                      </form>
+                    {{else}}
+                      <span class="text-muted small">—</span>
+                    {{end}}
+                  </td>
+                </tr>
+              {{else}}
+                <tr><td colspan="4" class="text-muted">No templates found.</td></tr>
+              {{end}}
+            </tbody>
+          </table>
+        </div>
+        <div class="text-muted small">Custom files in data/templates override embedded templates.</div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm mt-3">
+      <div class="card-body">
+        <h5 class="card-title">Upload override</h5>
+        <form method="post" action="/templates/upload" enctype="multipart/form-data" class="row g-2">
+          <input type="hidden" name="project_id" value="{{.ActiveProjectID}}">
+          <div class="col-12">
+            <input class="form-control" name="template_name" placeholder="Template name (vyos, cisco, ...)" required>
+          </div>
+          <div class="col-12">
+            <input class="form-control" type="file" name="template_file" accept=".tmpl,text/plain">
+          </div>
+          <div class="col-12">
+            <textarea class="form-control" name="template_content" rows="6" placeholder="Or paste template content here"></textarea>
+          </div>
+          <div class="col-12 d-grid">
+            <button class="btn btn-outline-primary">Save override</button>
+          </div>
+          <div class="col-12 text-muted small">File has priority over textarea. Upload replaces existing override.</div>
+          {{if .TemplateUploadError}}
+            <div class="col-12 text-danger small">{{.TemplateUploadError}}</div>
+          {{end}}
+          {{if .TemplateUploadSuccess}}
+            <div class="col-12 text-success small">{{.TemplateUploadSuccess}}</div>
+          {{end}}
+        </form>
+      </div>
+    </div>
+
+    <div class="card shadow-sm mt-3">
+      <div class="card-body">
+        <h5 class="card-title">Helpers</h5>
+        <ul class="small mb-0">
+          {{range .TemplateHelpers}}
+            <li>{{.}}</li>
+          {{else}}
+            <li class="text-muted">No helpers listed.</li>
+          {{end}}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title">Context preview</h5>
+        <form method="get" action="/templates" class="row g-2">
+          <input type="hidden" name="project_id" value="{{.ActiveProjectID}}">
+          <div class="col-6">
+            <label class="form-label">Template</label>
+            <select class="form-select" name="template">
+              {{range .TemplateCatalog}}
+                <option value="{{.Name}}" {{if eq $.TemplateSelected .Name}}selected{{end}}>{{.Name}}</option>
+              {{else}}
+                <option value="">No templates</option>
+              {{end}}
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label">Segment</label>
+            <select class="form-select" name="segment_id">
+              {{range .TemplateSegments}}
+                <option value="{{.ID}}" {{if eq $.SelectedSegmentID .ID}}selected{{end}}>
+                  {{.Site}}{{if .VRF}} / {{.VRF}}{{end}}{{if gt .VLAN 0}} / vlan{{.VLAN}}{{end}} / {{.Name}}
+                </option>
+              {{else}}
+                <option value="">No segments</option>
+              {{end}}
+            </select>
+          </div>
+          <div class="col-12 d-grid">
+            <button class="btn btn-primary" name="preview" value="1">Preview variables</button>
+          </div>
+          <div class="col-12 d-grid">
+            <button class="btn btn-outline-primary" name="render" value="1">Render output</button>
+          </div>
+          {{if .TemplateSelectedInfo.Name}}
+            <div class="col-12">
+              <div class="form-text">Template version {{.TemplateSelectedInfo.Version}}{{if .TemplateSelectedInfo.Source}} / {{.TemplateSelectedInfo.Source}}{{end}}</div>
+            </div>
+          {{end}}
+        </form>
+        {{if .TemplateError}}
+          <div class="text-danger small mt-2">{{.TemplateError}}</div>
+        {{end}}
+        {{if .TemplatePreview}}
+          <div class="text-muted small mt-2">Context includes Meta, Options, Defaults, Groups, Segments, Header.</div>
+          <pre class="bg-light p-3 mt-2 small">{{.TemplatePreview}}</pre>
+        {{else}}
+          <div class="text-muted mt-2">Select a segment to preview context.</div>
+        {{end}}
+        {{if .TemplateRenderError}}
+          <div class="text-danger small mt-2">{{.TemplateRenderError}}</div>
+        {{end}}
+        {{if .TemplateOutput}}
+          <div class="text-muted small mt-3">Rendered output (single segment scope).</div>
+          <pre class="bg-light p-3 mt-2 small">{{.TemplateOutput}}</pre>
+        {{else if .TemplateExample}}
+          <div class="text-muted small mt-3">Example output snippet.</div>
+          <pre class="bg-light p-3 mt-2 small">{{.TemplateExample}}</pre>
+        {{end}}
+      </div>
+    </div>
+
+    <div class="card shadow-sm mt-3">
+      <div class="card-body">
+        <h5 class="card-title">Variables and paths</h5>
+        <div class="text-muted small">Context keys available in templates:</div>
+        <ul class="small mb-2">
+          <li>.Header</li>
+          <li>.Meta</li>
+          <li>.Options</li>
+          <li>.Defaults</li>
+          <li>.Groups</li>
+          <li>.Segments</li>
+        </ul>
+        <div class="text-muted small">Locations:</div>
+        <ul class="small mb-0">
+          <li>Embedded templates: cmd/subnetio/templates/*.tmpl</li>
+          <li>Overrides: data/templates/&lt;name&gt;.tmpl</li>
+          <li>Docs: docs/templates.md</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}
