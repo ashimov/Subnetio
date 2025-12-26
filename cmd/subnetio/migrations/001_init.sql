@@ -1,3 +1,5 @@
+-- Copyright (c) 2025 Berik Ashimov
+
 CREATE TABLE IF NOT EXISTS sites (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL UNIQUE

@@ -1,3 +1,5 @@
+# Copyright (c) 2025 Berik Ashimov
+
 # syntax=docker/dockerfile:1
 
 FROM golang:1.22-alpine AS builder

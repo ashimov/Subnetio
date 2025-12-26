@@ -1,3 +1,5 @@
+-- Copyright (c) 2025 Berik Ashimov
+
 ALTER TABLE pools ADD COLUMN family TEXT NOT NULL DEFAULT 'ipv4';
 ALTER TABLE pools ADD COLUMN tier TEXT;
 ALTER TABLE pools ADD COLUMN priority INTEGER NOT NULL DEFAULT 0;

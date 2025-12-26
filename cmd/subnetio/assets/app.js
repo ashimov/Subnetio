@@ -1,3 +1,5 @@
+/* Copyright (c) 2025 Berik Ashimov */
+
 (() => {
   const attachConfirm = () => {
     const modal = document.getElementById('confirm-modal');

@@ -1,3 +1,5 @@
+-- Copyright (c) 2025 Berik Ashimov
+
 CREATE TABLE IF NOT EXISTS filter_presets (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   project_id INTEGER NOT NULL,

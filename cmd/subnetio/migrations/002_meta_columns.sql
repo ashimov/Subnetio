@@ -1,3 +1,5 @@
+-- Copyright (c) 2025 Berik Ashimov
+
 ALTER TABLE site_meta ADD COLUMN dhcp_search TEXT;
 ALTER TABLE site_meta ADD COLUMN dhcp_lease_time INTEGER;
 ALTER TABLE site_meta ADD COLUMN dhcp_renew_time INTEGER;
